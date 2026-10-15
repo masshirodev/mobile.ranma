@@ -1,0 +1,60 @@
+#!/bin/bash
+# mobile.ranma end to end: a private, headless ranma server (its own runtime,
+# state and config directories, in a tmux server of its own) loading this
+# checkout, a desk and a phone attached to it. Never touches a real session.
+#
+#   tests/e2e.sh                          with the ranma on PATH
+#   RANMA_BIN=~/projects/ranma/target/release/ranma tests/e2e.sh
+set -uo pipefail
+BIN=${RANMA_BIN:-$(command -v ranma)}
+PLUG=$(cd "$(dirname "$0")/.." && pwd)
+W=$(mktemp -d /tmp/mob.XXXX); RT=$W/rt; mkdir -p $RT $W/cfg $W/state $W/data $W/cache
+SOCK=mob-$$
+T() { tmux -L $SOCK "$@"; }
+ENV="env -u SSH_CONNECTION -u SSH_TTY -u SSH_CLIENT -u RANMA -u RANMA_SOCKET -u RANMA_PANE -u TMUX -u RANMA_MOBILE XDG_RUNTIME_DIR=$RT XDG_CACHE_HOME=$W/cache XDG_STATE_HOME=$W/state XDG_DATA_HOME=$W/data RANMA_CONFIG_DIR=$W/cfg RANMA_NO_UPDATE_CHECK=1 SHELL=/bin/bash"
+RL() { $ENV RANMA_SOCKET=$RT/ranma/1.sock $BIN lua "$1" 2>&1; }
+cleanup() { T kill-server 2>/dev/null; $ENV $BIN kill 1 >/dev/null 2>&1; rm -rf $W; }
+trap cleanup EXIT
+fail() { echo "FAIL: $*"; exit 1; }
+cat > $W/cfg/init.lua <<LUA
+ranma.set { plugin_manager = "none" }
+assert(ranma.packadd("$PLUG"))
+LUA
+$ENV $BIN --check-config >/dev/null 2>&1 || { $ENV $BIN --check-config; fail "check-config"; }
+echo "ok   loads (check-config)"
+T new-session -d -s desk -x 120 -y 30 "bash --norc"
+T new-session -d -s phone -x 52 -y 34 "bash --norc"
+T send-keys -t desk "$ENV $BIN attach 1" Enter
+for _ in $(seq 40); do [ "$(RL 'return true')" = true ] && break; sleep 0.25; done
+P() { RL 'return tostring(ranma.state().profile)' | tr -d '"'; }
+[ "$(P)" = nil ] || fail "desk starts with a profile: $(P)"
+T send-keys -t phone "$ENV RANMA_MOBILE=1 $BIN attach 1" Enter; sleep 1.5
+T send-keys -t phone 'echo phone' Enter; sleep 1
+[ "$(P)" = mobile ] || fail "phone driving: profile is $(P)"
+# The keyboard button where ranma has the action, Esc before it.
+key=$( [ "$(RL 'return ranma.has ~= nil and ranma.has("action.keyboard")')" = true ] && echo '⌨' || echo '⎋')
+T capture-pane -p -t phone | grep -q "≡.*$key.*✕" || fail "the touch toolbar, with $key, is not on the phone"
+echo "ok   the phone takes the drive: mobile profile, touch toolbar with $key"
+T send-keys -t desk 'echo desk' Enter; sleep 1
+[ "$(P)" = nil ] || fail "desk driving: profile is $(P)"
+echo "ok   the desk takes it back: profile gone"
+# A profile chosen at the desk while the phone drove (zen's, say) is left
+# alone when the desk takes the screen back.
+cat >> $W/cfg/init.lua <<'LUA'
+ranma.profile("other", { set = { layout = "master" } })
+LUA
+$ENV RANMA_SOCKET=$RT/ranma/1.sock $BIN action reload_config; sleep 1
+T send-keys -t phone 'echo phone2' Enter; sleep 1
+[ "$(P)" = mobile ] || fail "phone again: $(P)"
+$ENV RANMA_SOCKET=$RT/ranma/1.sock $BIN action "profile other"; sleep 0.5
+T send-keys -t desk 'echo desk2' Enter; sleep 1
+[ "$(P)" = other ] || fail "a profile picked meanwhile was taken away: $(P)"
+echo "ok   a profile picked meanwhile is left alone"
+$ENV RANMA_SOCKET=$RT/ranma/1.sock $BIN action "profile none"; sleep 0.3
+echo 'ranma.set { mobile = { follow = false } }' >> $W/cfg/init.lua
+$ENV RANMA_SOCKET=$RT/ranma/1.sock $BIN action reload_config; sleep 1
+[ "$(RL 'return ranma.get("mobile.follow")')" = false ] || fail "the option did not take"
+T send-keys -t phone 'echo phone3' Enter; sleep 1
+[ "$(P)" = nil ] || fail "follow = false still switched: $(P)"
+echo "ok   mobile.follow = false: nothing switches"
+echo "mobile e2e: ok"
