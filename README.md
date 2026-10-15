@@ -22,7 +22,9 @@ Needs ranma 0.3.0 or newer. The keyboard button needs the `keyboard` action (`ra
 
 ### Not wanted
 
-Turn it off in `~/.config/ranma/lua/plugins/mobile.lua`:
+Open hako's screen and press `x` on its row. The default setup installs it **once**: hako marks it in its store when the clone has landed, so a removed copy is not installed again on that machine. `i` puts it back.
+
+To turn it off on every machine your config reaches, in `~/.config/ranma/lua/plugins/mobile.lua`:
 
 ```lua
 return { "masshirodev/mobile.ranma", enabled = false }
