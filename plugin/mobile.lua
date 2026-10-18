@@ -10,6 +10,11 @@
 --   a three-row bar without the title (the tabs carry it) or the clock (the
 --   phone shows one);
 --   the "touch" toolbar along the bottom, three rows high, a thumb's height:
+--     ⇅ inner   where the buttons act: in the ranma inside the focused pane
+--               (the desk's, over SSH, when the phone runs its own) while
+--               that pane is focused, or "here" when tapped to stay on this
+--               one; tapped again, back to following (needs a ranma with
+--               `toolbar_target` on both; without it the button is not there)
 --     ≡ menu    the pane menu (there is no right click on a touch screen)
 --     + new     a new pane
 --     ◀ prev    focus the previous pane
@@ -49,19 +54,23 @@ ranma.option("mobile.follow", {
 -- leader and the keyboard. Without that row, { "⌃", "latch ctrl", text =
 -- "ctrl" } and { "⎋", "send esc", text = "esc" } are the two to add.
 local keyboard = ranma.has and ranma.has("action.keyboard")
+local target = ranma.has and ranma.has("action.toolbar_target")
+local buttons = {
+  { "≡", "pane_menu", text = "menu" },
+  { "+", "new_pane", text = "new" },
+  { "◀", "focus prev", text = "prev" },
+  { "▶", "focus next", text = "next" },
+  { "◆", "leader", text = "leader" },
+  keyboard and { "⌨", "keyboard", text = "keys" } or { "⎋", "send esc", text = "esc" },
+  { "⊞", "workspace_switcher", text = "spaces" },
+  { "✕", "close_pane", text = "close" },
+}
+-- Its text is ranma's: "inner" or "here", for where the buttons act now.
+if target then table.insert(buttons, 1, { "⇅", "toolbar_target" }) end
 ranma.toolbar("touch", {
   position = "bottom",
   size = "large",
-  buttons = {
-    { "≡", "pane_menu", text = "menu" },
-    { "+", "new_pane", text = "new" },
-    { "◀", "focus prev", text = "prev" },
-    { "▶", "focus next", text = "next" },
-    { "◆", "leader", text = "leader" },
-    keyboard and { "⌨", "keyboard", text = "keys" } or { "⎋", "send esc", text = "esc" },
-    { "⊞", "workspace_switcher", text = "spaces" },
-    { "✕", "close_pane", text = "close" },
-  },
+  buttons = buttons,
 })
 
 ranma.profile("mobile", {

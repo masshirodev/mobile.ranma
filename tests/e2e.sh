@@ -33,7 +33,11 @@ T send-keys -t phone 'echo phone' Enter; sleep 1
 [ "$(P)" = mobile ] || fail "phone driving: profile is $(P)"
 # The keyboard button where ranma has the action, Esc before it.
 key=$( [ "$(RL 'return ranma.has ~= nil and ranma.has("action.keyboard")')" = true ] && echo '⌨' || echo '⎋')
-T capture-pane -p -t phone | grep -q "≡.*$key.*✕" || fail "the touch toolbar, with $key, is not on the phone"
+# With the selector first, nine faces need 53 columns: at 52 the last two
+# fold into ⋯.
+want="≡.*$key.*✕"
+[ "$(RL 'return ranma.has("action.toolbar_target")')" = true ] && want="⇅.*≡.*$key.*⋯"
+T capture-pane -p -t phone | grep -q "$want" || fail "the touch toolbar, with $key, is not on the phone"
 echo "ok   the phone takes the drive: mobile profile, touch toolbar with $key"
 T send-keys -t desk 'echo desk' Enter; sleep 1
 [ "$(P)" = nil ] || fail "desk driving: profile is $(P)"
@@ -63,6 +67,33 @@ P2=$($ENV RANMA_SOCKET=$RT/ranma/2.sock $BIN lua 'return tostring(ranma.state().
 n=$(T capture-pane -p -t nest | grep -c "≡")
 [ "$n" = 1 ] || fail "the touch toolbar shows $n times nested"
 echo "ok   nested: the outer has the toolbar, this one only goes monocle"
+if [ "$(RL 'return ranma.has("action.toolbar_target")')" = true ]; then
+  # Wide enough for the selector's text beside its symbol.
+  T resize-window -t nest -x 110 -y 34; sleep 1.5
+  screen=$(T capture-pane -p -t nest)
+  echo "$screen" | grep -q "⇅ inner" || { echo "$screen"; fail "the selector does not say inner"; }
+  RL2() { $ENV RANMA_SOCKET=$RT/ranma/2.sock $BIN lua "$1" 2>&1; }
+  RL 'ranma.action("new_pane")' >/dev/null; sleep 0.5
+  f1=$(RL 'return ranma.state().focused'); f2=$(RL2 'return ranma.state().focused')
+  # A tap on ▶ (an SGR press and release where it is drawn), as Termux sends.
+  tap() {
+    local row col
+    row=$(T capture-pane -p -t nest | grep -n "$1" | tail -1 | cut -d: -f1)
+    col=$(T capture-pane -p -t nest | sed -n "${row}p" | awk -v s="$1" '{ print index($0, s) }')
+    col=$(T capture-pane -p -t nest | sed -n "${row}p" | cut -c1-$((col - 1)) | wc -m)
+    T send-keys -t nest -l $'\e[<0;'$((col + 1))';'$row'M'$'\e[<0;'$((col + 1))';'$row'm'; sleep 1
+  }
+  tap "▶"
+  [ "$(RL 'return ranma.state().focused')" != "$f1" ] || fail "▶ did not move the inner's focus"
+  [ "$(RL2 'return ranma.state().focused')" = "$f2" ] || fail "▶ moved the outer's focus"
+  echo "ok   a button follows the focus into the desk's ranma"
+  tap "⇅"
+  T capture-pane -p -t nest | grep -q "⇅ here" || fail "the selector does not say here once tapped"
+  f1=$(RL 'return ranma.state().focused')
+  tap "▶"
+  [ "$(RL 'return ranma.state().focused')" = "$f1" ] || fail "pinned here, ▶ still went inside"
+  echo "ok   tapped, the selector keeps the buttons on the phone's ranma"
+fi
 T send-keys -t desk 'echo desk3' Enter; sleep 1
 [ "$(P)" = nil ] || fail "desk after nested: profile is $(P)"
 echo "ok   the desk takes it back from a nested phone"

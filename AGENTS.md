@@ -24,7 +24,8 @@ https://github.com/masshirodev/ranma/blob/main/doc/CONFIG.md (`ranma --dump-type
   client with `ranma attach --mobile` to play the phone. Cases worth
   repeating: the phone takes the drive (profile on), the desk takes it back
   (profile off), a phone whose own ranma holds this one (`mobile_nested`,
-  one toolbar), zen on at the desk when the phone leaves (left alone),
+  one toolbar; with `toolbar_target`, a tap on ▶ moves the inner's focus and
+  ⇅ keeps it here), zen on at the desk when the phone leaves (left alone),
   `mobile.follow = false` (nothing switches), and a reload while the phone
   drives.
 - `AGENTS.local.md` (gitignored) carries what is true of one checkout on one
