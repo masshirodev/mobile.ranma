@@ -64,8 +64,12 @@ Termux's ~/.ssh/config with AcceptEnv RANMA_* in the far sshd, or
     ⊞ spaces  the workspace switcher
     ✕ close   close the pane
   Past what fits, the last button becomes ⋯ for the rest.
-When the desk drives again, the profile goes, and only if it is still
-"mobile": a profile something else chose meanwhile (zen's) is left alone.
+Inside another ranma (the phone runs one of its own, and this one is in
+its pane over SSH), the "mobile_nested" profile instead: monocle only. The
+outer ranma already draws the touch toolbar and this one's bar, so a
+second toolbar would only stack under the first.
+When the desk drives again, the profile goes, and only if it is still one
+of these two: a profile something else chose meanwhile (zen's) is left alone.
 ```
 
 What gives way as the phone's keyboard takes half the screen (the tab strip, then the bar's size, the border, the toolbar's size, the toolbar) is ranma's, not this plugin's: see ranma's `doc/CONFIG.md`, "A mobile view".

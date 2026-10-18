@@ -23,7 +23,8 @@ https://github.com/masshirodev/ranma/blob/main/doc/CONFIG.md (`ranma --dump-type
   (`tmux -L <name>`), as ranma's `scripts/smoke.sh` does. Attach a second
   client with `ranma attach --mobile` to play the phone. Cases worth
   repeating: the phone takes the drive (profile on), the desk takes it back
-  (profile off), zen on at the desk when the phone leaves (left alone),
+  (profile off), a phone whose own ranma holds this one (`mobile_nested`,
+  one toolbar), zen on at the desk when the phone leaves (left alone),
   `mobile.follow = false` (nothing switches), and a reload while the phone
   drives.
 - `AGENTS.local.md` (gitignored) carries what is true of one checkout on one

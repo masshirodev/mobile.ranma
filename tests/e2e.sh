@@ -13,7 +13,7 @@ SOCK=mob-$$
 T() { tmux -L $SOCK "$@"; }
 ENV="env -u SSH_CONNECTION -u SSH_TTY -u SSH_CLIENT -u RANMA -u RANMA_SOCKET -u RANMA_PANE -u TMUX -u RANMA_MOBILE XDG_RUNTIME_DIR=$RT XDG_CACHE_HOME=$W/cache XDG_STATE_HOME=$W/state XDG_DATA_HOME=$W/data RANMA_CONFIG_DIR=$W/cfg RANMA_NO_UPDATE_CHECK=1 SHELL=/bin/bash"
 RL() { $ENV RANMA_SOCKET=$RT/ranma/1.sock $BIN lua "$1" 2>&1; }
-cleanup() { T kill-server 2>/dev/null; $ENV $BIN kill 1 >/dev/null 2>&1; rm -rf $W; }
+cleanup() { T kill-server 2>/dev/null; $ENV $BIN kill 1 >/dev/null 2>&1; $ENV $BIN kill 2 >/dev/null 2>&1; rm -rf $W; }
 trap cleanup EXIT
 fail() { echo "FAIL: $*"; exit 1; }
 cat > $W/cfg/init.lua <<LUA
@@ -51,6 +51,21 @@ T send-keys -t desk 'echo desk2' Enter; sleep 1
 [ "$(P)" = other ] || fail "a profile picked meanwhile was taken away: $(P)"
 echo "ok   a profile picked meanwhile is left alone"
 $ENV RANMA_SOCKET=$RT/ranma/1.sock $BIN action "profile none"; sleep 0.3
+# The phone runs a ranma of its own (server 2) and attaches to this one from
+# its pane: the outer has the toolbar, and this one only goes monocle.
+T new-session -d -s nest -x 52 -y 34 "bash --norc"
+T send-keys -t nest "$ENV RANMA_MOBILE=1 $BIN attach 2" Enter; sleep 2
+T send-keys -t nest "$ENV RANMA_MOBILE=1 $BIN attach 1" Enter; sleep 2
+T send-keys -t nest 'echo nested' Enter; sleep 1
+[ "$(P)" = mobile_nested ] || fail "nested phone: profile is $(P)"
+P2=$($ENV RANMA_SOCKET=$RT/ranma/2.sock $BIN lua 'return tostring(ranma.state().profile)' 2>&1 | tr -d '"')
+[ "$P2" = mobile ] || fail "the phone's own ranma: profile is $P2"
+n=$(T capture-pane -p -t nest | grep -c "≡")
+[ "$n" = 1 ] || fail "the touch toolbar shows $n times nested"
+echo "ok   nested: the outer has the toolbar, this one only goes monocle"
+T send-keys -t desk 'echo desk3' Enter; sleep 1
+[ "$(P)" = nil ] || fail "desk after nested: profile is $(P)"
+echo "ok   the desk takes it back from a nested phone"
 echo 'ranma.set { mobile = { follow = false } }' >> $W/cfg/init.lua
 $ENV RANMA_SOCKET=$RT/ranma/1.sock $BIN action reload_config; sleep 1
 [ "$(RL 'return ranma.get("mobile.follow")')" = false ] || fail "the option did not take"

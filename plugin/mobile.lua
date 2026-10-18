@@ -21,8 +21,12 @@
 --     ⊞ spaces  the workspace switcher
 --     ✕ close   close the pane
 --   Past what fits, the last button becomes ⋯ for the rest.
--- When the desk drives again, the profile goes, and only if it is still
--- "mobile": a profile something else chose meanwhile (zen's) is left alone.
+-- Inside another ranma (the phone runs one of its own, and this one is in
+-- its pane over SSH), the "mobile_nested" profile instead: monocle only. The
+-- outer ranma already draws the touch toolbar and this one's bar, so a
+-- second toolbar would only stack under the first.
+-- When the desk drives again, the profile goes, and only if it is still one
+-- of these two: a profile something else chose meanwhile (zen's) is left alone.
 --
 -- mobile.follow (default on) is read each time the driver changes, so turning
 -- it off in the settings panel stops the switching from then on. The toolbar
@@ -66,12 +70,18 @@ ranma.profile("mobile", {
   toolbars = { "touch" },
 })
 
+-- Nested, the outer ranma's toolbar and bar are the phone's.
+ranma.profile("mobile_nested", {
+  set = { layout = "monocle" },
+})
+
 ranma.on("driver_change", function(c)
   if not ranma.get("mobile.follow") then return end
   local profile = ranma.state().profile
+  local want = c.outer and "mobile_nested" or "mobile"
   if c.mobile then
-    if profile ~= "mobile" then ranma.use_profile("mobile") end
-  elseif profile == "mobile" then
+    if profile ~= want then ranma.use_profile(want) end
+  elseif profile == "mobile" or profile == "mobile_nested" then
     ranma.use_profile(nil)
   end
 end)
